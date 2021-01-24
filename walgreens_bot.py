@@ -7,7 +7,8 @@ import time, sys, winsound
 
 home_zip = "60035"
 account_sid = 'AC99bf6aa4ea27b5b4ac6711c30bb0ddc2' #twilio
-auth_token = '984a666cb60039b199575eec091a4203' #twilio
+with open("twilio-credentials.txt") as fp:
+    auth_token = fp.read()
 
 def get_location(browser):
     return browser.find_element_by_xpath("//section[@class='locationLeft']/section[1]/p[3]").get_attribute("innerText")
@@ -87,7 +88,14 @@ def fill_out_survey(browser, second_dose=False):
     browser.find_element_by_id("hn-startVisitBlock-gb-terms").click()
     time.sleep(2)
     
-    browser.find_element_by_id("insurance-yes").click()
+    try:
+        browser.find_element_by_id("insurance-yes").click()
+    except:
+        time.sleep(5)
+        try:
+            browser.find_element_by_id("insurance-yes").click()
+        except:
+            pass
     if second_dose:
         browser.find_element_by_id("dose2").click()
         browser.find_element_by_id("datepicker0").click()
@@ -122,7 +130,10 @@ def check_dates(browser, argv, second_dose=False):
     check_times(browser, argv, second_dose=second_dose)
     for i in range(1, len(cells)):
         browser.find_element_by_id("datepicker").click()
-        browser.find_elements_by_xpath(dates_xpath)[i].click()
+        try:
+            browser.find_elements_by_xpath(dates_xpath)[i].click()
+        except:
+            pass
         check_times(browser, argv, second_dose=second_dose)
 
 def check_cities(browser, argv, second_dose=False):
