@@ -3,7 +3,6 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from twilio.rest import Client
-
 import time, sys, winsound
 
 home_zip = "60035"
@@ -33,12 +32,12 @@ def login(browser, username, password, security_answer):
     except:
         pass
 
-def get_appointment(date, loc, time):
+def get_appointment(date, argv, loc, time, second_dose=False):
     browser = webdriver.Chrome(ChromeDriverManager().install())
     url = 'https://www.walgreens.com/findcare/vaccination/covid-19/appointment/screening'
     browser.get(url)
-    login(browser, username, password, security_answer)
-    fill_out_survey(browser)
+    login(browser, argv[1], argv[2], argv[3])
+    fill_out_survey(browser, second_dose=second_dose)
     browser.find_element_by_class_name("selectStorebtn").click()
     time.sleep(1)
     browser.find_element_by_class_name("storeSearch").click()
@@ -62,17 +61,18 @@ def get_appointment(date, loc, time):
     select_date(browser, date, "datepicker")
     Select(browser.find_element_by_id("select-dropdown")).select_by_value(time)
 
-def check_times(browser, date):
+def check_times(browser, argv, second_dose=False):
     dropdown = Select(browser.find_element_by_id("select-dropdown"))
     for time in ["Before 8 am", "8 am - 12 pm", "12 pm - 3 pm", "3 pm - 6 pm", "6 pm - 9 pm", "After 9 pm"]:
         dropdown.select_by_value(time)
         slots = browser.find_element_by_class_name("slotssection")
         if "sorry" not in slots.find_elements_by_css_selector("*")[1].get_attribute("innerText"):
-            message = str(date) + ' ' + time + ' ' + get_location(browser)
+            date = browser.find_element_by_id("datepicker").get_attribute("value")
+            message = date + ' ' + time + ' ' + get_location(browser)
             print(message)
             send_message(browser, message)
             winsound.Beep(2500, 5000)
-            get_appointment(date, get_location(browser), time)
+            get_appointment(date, argv, get_location(browser), time, second_dose=second_dose)
             sys.exit()
 
 def fill_out_survey(browser, second_dose=False):
@@ -114,19 +114,25 @@ def select_date(browser, date, datepicker):
         print(date)
         print(get_location(browser))
 
-def check_dates(browser):
-    for date in range(time.localtime().tm_mday + 6, 24, -1):
-        select_date(browser, date, "datepicker")
-        check_times(browser, date)
+def check_dates(browser, argv, second_dose=False):
+    dates_xpath = "//div[@id='ui-datepicker-div']/table[1]/tbody[1]/tr/td/a"
+    browser.find_element_by_id("datepicker").click()
+    cells = browser.find_elements_by_xpath(dates_xpath)
+    browser.find_element_by_class_name("ui-datepicker-current-day").click()
+    check_times(browser, argv, second_dose=second_dose)
+    for i in range(1, len(cells)):
+        browser.find_element_by_id("datepicker").click()
+        browser.find_elements_by_xpath(dates_xpath)[i].click()
+        check_times(browser, argv, second_dose=second_dose)
 
-def check_cities(browser):
+def check_cities(browser, argv, second_dose=False):
     for city in range(0, 40):
-            browser.find_element_by_name("userStore").click()
-            for _ in range(5):
-                browser.find_element_by_class_name("storeSearch").send_keys(Keys.DOWN)
-            store_button = browser.find_elements_by_xpath(f"//section[@id='wag-store-info-{city}']/div[1]/section[3]/a[1]")
-            store_button[0].click()
-            check_dates(browser)
+        browser.find_element_by_name("userStore").click()
+        #for _ in range(5):
+            #   browser.find_element_by_class_name("storeSearch").send_keys(Keys.DOWN)
+        store_button = browser.find_elements_by_xpath(f"//section[@id='wag-store-info-{city}']/div[1]/section[3]/a[1]")
+        store_button[0].click()
+        check_dates(browser, argv, second_dose=second_dose)
 
 def select_zip(browser, zip):
     while get_location(browser)[-5:-2] != str(zip)[-5:-2]:
@@ -142,21 +148,20 @@ def select_zip(browser, zip):
         browser.find_element_by_class_name("storeSearch").click()
         store_button = browser.find_elements_by_xpath(f"//section[@id='wag-store-info-0']/div[1]/section[3]/a[1]")
         store_button[0].click()
-        time.sleep(5)
+        time.sleep(2)
 
-def check_for_appointments(browser):
-    fill_out_survey(browser)
+def check_for_appointments(browser, argv, second_dose=False):
+    fill_out_survey(browser, second_dose=second_dose)
     select_zip(browser, home_zip)
     while (True):
-        check_cities(browser)
+        check_cities(browser, argv, second_dose=second_dose)
 
-if __name__ == "__main__":
-    username = sys.argv[1]
-    password = sys.argv[2]
-    security_answer = sys.argv[3]
+def login_and_check(argv, second_dose=False):
+    username = argv[1]
+    password = argv[2]
+    security_answer = argv[3]
     browser = webdriver.Firefox(executable_path=r'C:\usr\local\bin\geckodriver.exe')
     url = 'https://www.walgreens.com/findcare/vaccination/covid-19/appointment/screening'
-
     while True:
         browser.get(url)
         try:
@@ -164,11 +169,12 @@ if __name__ == "__main__":
         except:
             pass
         try:
-            check_for_appointments(browser)
+            check_for_appointments(browser, argv, second_dose=second_dose)
         except Exception as e:
             #winsound.Beep(1500, 500)
             print(e)
             time.sleep(5)
+    
             
             
         
