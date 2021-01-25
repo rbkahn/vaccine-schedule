@@ -6,9 +6,10 @@ from twilio.rest import Client
 import time, sys, winsound
 
 home_zip = "60035"
-account_sid = 'AC99bf6aa4ea27b5b4ac6711c30bb0ddc2' #twilio
 with open("twilio-credentials.txt") as fp:
-    auth_token = fp.read()
+    lines = fp.readlines()
+    account_sid = lines[0]
+    auth_token = lines[1]
 
 def get_location(browser):
     return browser.find_element_by_xpath("//section[@class='locationLeft']/section[1]/p[3]").get_attribute("innerText")
@@ -133,16 +134,18 @@ def check_dates(browser, argv, second_dose=False):
         try:
             browser.find_elements_by_xpath(dates_xpath)[i].click()
         except:
-            pass
+            time.sleep(1)
+            browser.find_elements_by_xpath(dates_xpath)[i].click()
         check_times(browser, argv, second_dose=second_dose)
 
 def check_cities(browser, argv, second_dose=False):
-    for city in range(0, 40):
+    for city in range(100):
         browser.find_element_by_name("userStore").click()
-        #for _ in range(5):
-            #   browser.find_element_by_class_name("storeSearch").send_keys(Keys.DOWN)
         store_button = browser.find_elements_by_xpath(f"//section[@id='wag-store-info-{city}']/div[1]/section[3]/a[1]")
         store_button[0].click()
+        limit = float(argv[5]) if len(argv) > 5 else 30
+        if float(browser.find_element_by_class_name("locationright").get_attribute("innerText").split(' ')[0]) > limit:
+            break
         check_dates(browser, argv, second_dose=second_dose)
 
 def select_zip(browser, zip):
@@ -163,7 +166,7 @@ def select_zip(browser, zip):
 
 def check_for_appointments(browser, argv, second_dose=False):
     fill_out_survey(browser, second_dose=second_dose)
-    select_zip(browser, home_zip)
+    select_zip(browser, argv[4] if len(argv) > 4 else "60035")
     while (True):
         check_cities(browser, argv, second_dose=second_dose)
 
