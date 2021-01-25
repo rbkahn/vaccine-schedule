@@ -1,3 +1,5 @@
 twilio-credentials.txt
 *.pyc
 *.log
+.vscode/*
+__pycache__/*
