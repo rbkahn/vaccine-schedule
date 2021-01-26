@@ -3,3 +3,4 @@ twilio-credentials.txt
 *.log
 .vscode/*
 __pycache__/*
+/geckodriver.log
