@@ -39,7 +39,7 @@ def get_appointment(date, argv, loc, time, second_dose=False):
     url = 'https://www.walgreens.com/findcare/vaccination/covid-19/appointment/screening'
     browser.get(url)
     login(browser, argv[1], argv[2], argv[3])
-    fill_out_survey(browser, second_dose=second_dose)
+    fill_out_survey(browser, argv[4], second_dose=second_dose)
     browser.find_element_by_class_name("selectStorebtn").click()
     time.sleep(1)
     browser.find_element_by_class_name("storeSearch").click()
@@ -77,7 +77,7 @@ def check_times(browser, argv, second_dose=False):
             get_appointment(date, argv, get_location(browser), time, second_dose=second_dose)
             sys.exit()
 
-def fill_out_survey(browser, second_dose=False):
+def fill_out_survey(browser, home_zip, second_dose=False):
     browser.implicitly_wait(10)
     browser.find_element_by_id('sq_101i_0').click()
     browser.find_element_by_id('sq_102i_1').click()
@@ -105,7 +105,10 @@ def fill_out_survey(browser, second_dose=False):
     else:
         browser.find_element_by_id("dose1").click()
     browser.find_element_by_class_name("selectStorebtn").click()
+    
     time.sleep(1)
+    if len(browser.find_element_by_id("search-address").get_attribute("value").strip()) == 0:
+        browser.find_element_by_id("search-address").send_keys(home_zip)
     browser.find_element_by_class_name("storeSearch").click()
     time.sleep(1)
     browser.find_elements_by_class_name("selectbtn")[0].click()
@@ -178,7 +181,7 @@ def select_zip(browser, zip):
         time.sleep(2)
 
 def check_for_appointments(browser, argv, second_dose=False):
-    fill_out_survey(browser, second_dose=second_dose)
+    fill_out_survey(browser, argv[4], second_dose=second_dose)
     select_zip(browser, argv[4] if len(argv) > 4 else "60035")
     while (True):
         check_cities(browser, argv, second_dose=second_dose)
