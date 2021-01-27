@@ -123,11 +123,13 @@ def select_date(browser, date, datepicker):
         print(date)
         print(get_location(browser))
 
-def check_dates(browser, argv, second_dose=False):
+def check_dates(browser, argv, second_dose=False, recursing=False):
     dates_xpath = "//div[@id='ui-datepicker-div']/table[1]/tbody[1]/tr/td/a"
-    browser.find_element_by_id("datepicker").click()
     cells = browser.find_elements_by_xpath(dates_xpath)
-    browser.find_element_by_class_name("ui-datepicker-current-day").click()
+    if recursing:
+        cells[0].click()
+    else:
+        browser.find_element_by_class_name("ui-datepicker-current-day").click()
     check_times(browser, argv, second_dose=second_dose)
     for i in range(1, len(cells)):
         browser.find_element_by_id("datepicker").click()
@@ -137,6 +139,16 @@ def check_dates(browser, argv, second_dose=False):
             time.sleep(1)
             browser.find_elements_by_xpath(dates_xpath)[i].click()
         check_times(browser, argv, second_dose=second_dose)
+    browser.find_element_by_id("datepicker").click()
+    right_button = browser.find_element_by_xpath("//div[@id='ui-datepicker-div']/div[1]/a[2]")
+    if ("disabled" in right_button.get_attribute("class")):
+        browser.find_element_by_xpath("//div[@id='ui-datepicker-div']/div[1]/a[1]").click()
+        cells = browser.find_elements_by_xpath(dates_xpath)
+        cells[0].click()
+        return
+    right_button.click()
+    check_dates(browser, argv, second_dose=second_dose, recursing=True)
+
 
 def check_cities(browser, argv, second_dose=False):
     for city in range(100):
@@ -146,8 +158,9 @@ def check_cities(browser, argv, second_dose=False):
         limit = float(argv[5]) if len(argv) > 5 else 30
         if float(browser.find_element_by_class_name("locationright").get_attribute("innerText").split(' ')[0]) > limit:
             break
+        browser.find_element_by_id("datepicker").click()
         check_dates(browser, argv, second_dose=second_dose)
-
+        
 def select_zip(browser, zip):
     while get_location(browser)[-5:-2] != str(zip)[-5:-2]:
         try: 
