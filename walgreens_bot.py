@@ -6,14 +6,21 @@ from twilio.rest import Client
 import time, sys, winsound
 
 url = 'https://www.walgreens.com/login.jsp?ru=%2Ffindcare%2Fvaccination%2Fcovid-19%2Fappointment%2Fscreening%3Fflow%3Drx'
+url = 'https://www.walgreens.com/findcare/vaccination/covid-19/location-screening'
+url = 'https://www.walgreens.com/findcare/vaccination/covid-19/appointment/screening'
 # global variables for success
 chosen_date = ""
 chosen_time = ""
 
+with open("twilio-credentials.txt") as fp:
+    lines = fp.readlines()
+    account_sid = lines[0]
+    auth_token = lines[1]
+
 def get_location(browser):
     return browser.find_element_by_xpath("//section[@class='locationLeft']/section[1]/p[3]").get_attribute("innerText")
 
-def send_message(browser, message, account_sid, auth_token):
+def send_message(message, account_sid, auth_token):
     client = Client(account_sid, auth_token)
     client.messages.create(
                      body=message,
@@ -80,8 +87,14 @@ def fill_out_survey(browser, home_zip, second_dose=False):
     else:
         browser.find_element_by_id("dose1").click()
     time.sleep(1)
+    # button isn't available
     browser.find_element_by_id("continueBtn").click()
 
+def getButtonByInnerText(browser, innerText):
+    buttons = browser.find_elements_by_tag_name('button')
+    for button in buttons:
+        if button.get_attribute("innerText") == innerText:
+            return button
         
 def select_zip(browser, zip):
     while True:
@@ -98,15 +111,27 @@ def select_zip(browser, zip):
             message = browser.find_element_by_xpath("//section[@id='wag-body-main-container']/section[1]/section[1]/section[1]/p[1]").get_attribute("innerText")
         if "don't" not in message:
             winsound.Beep(2500, 4000)
-            sys.exit()
-            break
+            return
         time.sleep(10)
 
+def appointments_unavailable(browser):
+    paragraphs = browser.find_elements_by_tag_name('p')
+    for p in paragraphs:
+        if p.get_attribute("innerText") == "Appointments unavailable":
+            return True
+    return False
+
 def confirm_eligibility(browser, home_zip):
-    time.sleep(2)
-    browser.find_element_by_id("inputLocation").clear()
-    browser.find_element_by_id("inputLocation").send_keys(home_zip)
-    browser.find_element_by_xpath("//section[@id='wag-body-main-container']/section[1]/section[1]/section[1]/section[1]/div[1]/span[1]/button[1]").click()
+    while True:
+        time.sleep(2)
+        browser.find_element_by_id("inputLocation").clear()
+        browser.find_element_by_id("inputLocation").send_keys(home_zip)
+        getButtonByInnerText(browser, "Search").click()
+        time.sleep(2)
+        if not appointments_unavailable(browser):
+            break
+        time.sleep(10)
+    send_message("Got past the zip code screen", account_sid, auth_token)
     time.sleep(3)
     browser.find_element_by_id("sq_100i_1").click()
     browser.find_element_by_id("eligibility-check").click()
@@ -130,22 +155,16 @@ def login_and_check(argv, second_dose=False):
             pass
         try:
             check_for_appointments(browser, argv, second_dose=second_dose)
+            break
         except Exception as e:
             print(e)
-        finally:
-            message = chosen_date + ' ' + chosen_time + ' ' + get_location(browser)
-            print(message)
-            try:
-                with open("twilio-credentials.txt") as fp:
-                    lines = fp.readlines()
-                    account_sid = lines[0]
-                    auth_token = lines[1]
-                    send_message(browser, message, account_sid, auth_token)
-            except:
-                pass
-            winsound.Beep(2500, 4000)
-            get_appointment(chosen_date, argv, get_location(browser), chosen_time, second_dose=second_dose)
-            break
+    message = "Found an appointment!"
+    print(message)
+    try:
+        send_message(message, account_sid, auth_token)
+    except:
+        pass
+    get_appointment(chosen_date, argv, get_location(browser), chosen_time, second_dose=second_dose)
 
 if __name__ == "__main__":
     login_and_check(sys.argv, second_dose=False)
