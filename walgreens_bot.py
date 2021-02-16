@@ -114,12 +114,18 @@ def select_zip(browser, zip):
             return
         time.sleep(10)
 
-def appointments_unavailable(browser):
+def find_p_with_text(browser, text):
     paragraphs = browser.find_elements_by_tag_name('p')
     for p in paragraphs:
-        if p.get_attribute("innerText") == "Appointments unavailable":
+        if text in p.get_attribute("innerText"):
             return True
     return False
+
+def service_unavailable(browser):
+    return find_p_with_text(browser, "Service temporarily unavailable")
+
+def appointments_unavailable(browser):
+    return find_p_with_text(browser, "Appointments unavailable")
 
 def confirm_eligibility(browser, home_zip):
     while True:
@@ -131,16 +137,22 @@ def confirm_eligibility(browser, home_zip):
         if not appointments_unavailable(browser):
             break
         time.sleep(10)
+    if service_unavailable(browser):
+        return False
     send_message("Got past the zip code screen", account_sid, auth_token)
     time.sleep(3)
     browser.find_element_by_id("sq_100i_1").click()
     browser.find_element_by_id("eligibility-check").click()
     browser.find_element_by_class_name("sv_complete_btn").click()
+    return True
 
 def check_for_appointments(browser, argv, second_dose=False):
-    confirm_eligibility(browser, argv[4])
-    fill_out_survey(browser, argv[4], second_dose=second_dose)
-    select_zip(browser, argv[4] if len(argv) > 4 else "60035")
+    if confirm_eligibility(browser, argv[4]):
+        fill_out_survey(browser, argv[4], second_dose=second_dose)
+        select_zip(browser, argv[4] if len(argv) > 4 else "60035")
+        return True
+    else:
+        return False
 
 def login_and_check(argv, second_dose=False):
     username = argv[1]
@@ -154,8 +166,8 @@ def login_and_check(argv, second_dose=False):
         except:
             pass
         try:
-            check_for_appointments(browser, argv, second_dose=second_dose)
-            break
+            if check_for_appointments(browser, argv, second_dose=second_dose):
+                break
         except Exception as e:
             print(e)
     message = "Found an appointment!"
