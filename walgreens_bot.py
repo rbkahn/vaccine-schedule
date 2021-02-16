@@ -91,28 +91,19 @@ def fill_out_survey(browser, home_zip, second_dose=False):
     browser.find_element_by_id("continueBtn").click()
 
 def getButtonByInnerText(browser, innerText):
-    buttons = browser.find_elements_by_tag_name('button')
-    for button in buttons:
-        if button.get_attribute("innerText") == innerText:
-            return button
-        
-def select_zip(browser, zip):
-    while True:
-        time.sleep(1)
-        #browser.find_element_by_id("search-address").clear()
-        #time.sleep(2)
-        #browser.find_element_by_id("search-address").send_keys(zip)
-        #time.sleep(2)
-        browser.find_element_by_class_name("storeSearch").click()
-        time.sleep(1)
-        message = browser.find_element_by_xpath("//section[@id='wag-body-main-container']/section[1]/section[1]/section[1]/p[1]").get_attribute("innerText")
-        while "Checking" in message:
-            time.sleep(1)
-            message = browser.find_element_by_xpath("//section[@id='wag-body-main-container']/section[1]/section[1]/section[1]/p[1]").get_attribute("innerText")
-        if "don't" not in message:
-            winsound.Beep(2500, 4000)
-            return
-        time.sleep(10)
+    return getTagByText(browser, "button", innerText)
+
+def getTagByText(browser, tag, text):
+    elements = browser.find_elements_by_tag_name(tag)
+    for e in elements:
+        if e.get_attribute("innerText") == text:
+            return e
+
+def schedule_vaccine(browser):
+    Select(browser.find_element_by_id("race-dropdown")).select_by_visible_text("White")
+    Select(browser.find_element_by_id("ethnicity-dropdown")).select_by_visible_text("Decline to answer")
+    browser.find_element_by_id("dose1").click()
+    getButtonByInnerText(browser, "Schedule Now").click()
 
 def find_p_with_text(browser, text):
     paragraphs = browser.find_elements_by_tag_name('p')
@@ -122,12 +113,12 @@ def find_p_with_text(browser, text):
     return False
 
 def service_unavailable(browser):
-    return find_p_with_text(browser, "Service temporarily unavailable")
+    return appointments_unavailable(browser) or find_p_with_text(browser, "Service temporarily unavailable")
 
 def appointments_unavailable(browser):
     return find_p_with_text(browser, "Appointments unavailable")
 
-def confirm_eligibility(browser, home_zip):
+def check_availability(browser, home_zip):
     while True:
         time.sleep(2)
         browser.find_element_by_id("inputLocation").clear()
@@ -139,17 +130,21 @@ def confirm_eligibility(browser, home_zip):
         time.sleep(10)
     if service_unavailable(browser):
         return False
-    send_message("Got past the zip code screen", account_sid, auth_token)
+    return True
+
+
+def confirm_eligibility(browser, home_zip):
+    getTagByText(browser, "a", "See if you're eligible").click()
     time.sleep(3)
     browser.find_element_by_id("sq_100i_1").click()
     browser.find_element_by_id("eligibility-check").click()
     browser.find_element_by_class_name("sv_complete_btn").click()
-    return True
 
 def check_for_appointments(browser, argv, second_dose=False):
-    if confirm_eligibility(browser, argv[4]):
+    if check_availability(browser, argv[4]):
+        confirm_eligibility(browser, argv[4])
         fill_out_survey(browser, argv[4], second_dose=second_dose)
-        select_zip(browser, argv[4] if len(argv) > 4 else "60035")
+        schedule_vaccine(browser)
         return True
     else:
         return False
