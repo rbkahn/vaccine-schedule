@@ -68,7 +68,7 @@ def get_appointment(date, argv, loc, time, second_dose=False):
     Select(browser.find_element_by_id("select-dropdown")).select_by_value(time)
 
 
-def fill_out_survey(browser, home_zip, second_dose=False):
+def fill_out_survey(browser, second_dose=False):
     browser.implicitly_wait(10)
     browser.find_element_by_id('sq_100i_1').click()
     browser.find_element_by_id('sq_102i_1').click()
@@ -118,22 +118,23 @@ def service_unavailable(browser):
 def appointments_unavailable(browser):
     return find_p_with_text(browser, "Appointments unavailable")
 
-def check_availability(browser, home_zip):
+def check_availability(browser, home_zips):
     while True:
-        time.sleep(2)
-        browser.find_element_by_id("inputLocation").clear()
-        browser.find_element_by_id("inputLocation").send_keys(home_zip)
-        getButtonByInnerText(browser, "Search").click()
-        time.sleep(2)
-        if not appointments_unavailable(browser):
-            break
-        time.sleep(10)
-    if service_unavailable(browser):
-        return False
-    return True
+        for home_zip in home_zips:
+            time.sleep(2)
+            browser.find_element_by_id("inputLocation").clear()
+            browser.find_element_by_id("inputLocation").send_keys(home_zip)
+            getButtonByInnerText(browser, "Search").click()
+            time.sleep(2)
+            if not appointments_unavailable(browser):
+                if service_unavailable(browser):
+                    return False
+                else:
+                    return True
+            time.sleep(5)
 
 
-def confirm_eligibility(browser, home_zip):
+def confirm_eligibility(browser):
     getTagByText(browser, "a", "See if you're eligible").click()
     time.sleep(3)
     browser.find_element_by_id("sq_100i_1").click()
@@ -141,9 +142,9 @@ def confirm_eligibility(browser, home_zip):
     browser.find_element_by_class_name("sv_complete_btn").click()
 
 def check_for_appointments(browser, argv, second_dose=False):
-    if check_availability(browser, argv[4]):
-        confirm_eligibility(browser, argv[4])
-        fill_out_survey(browser, argv[4], second_dose=second_dose)
+    if check_availability(browser, argv[4:]):
+        confirm_eligibility(browser)
+        fill_out_survey(browser, second_dose=second_dose)
         schedule_vaccine(browser)
         return True
     else:
