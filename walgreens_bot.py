@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
-from twilio.rest import Client
+from utils import send_message, getButtonByInnerText, getTagByText
 import time, sys, winsound
 
 url = 'https://www.walgreens.com/login.jsp?ru=%2Ffindcare%2Fvaccination%2Fcovid-19%2Fappointment%2Fscreening%3Fflow%3Drx'
@@ -12,20 +12,8 @@ url = 'https://www.walgreens.com/findcare/vaccination/covid-19/appointment/scree
 chosen_date = ""
 chosen_time = ""
 
-with open("twilio-credentials.txt") as fp:
-    lines = fp.readlines()
-    account_sid = lines[0]
-    auth_token = lines[1]
-
 def get_location(browser):
     return browser.find_element_by_xpath("//section[@class='locationLeft']/section[1]/p[3]").get_attribute("innerText")
-
-def send_message(message, account_sid, auth_token):
-    client = Client(account_sid, auth_token)
-    client.messages.create(
-                     body=message,
-                     from_='+14159497162',
-                     to='+18477103770')
 
 def login(browser, username, password, security_answer):
     browser.find_element_by_name("username").send_keys(username)
@@ -90,15 +78,6 @@ def fill_out_survey(browser, second_dose=False):
     # button isn't available
     browser.find_element_by_id("continueBtn").click()
 
-def getButtonByInnerText(browser, innerText):
-    return getTagByText(browser, "button", innerText)
-
-def getTagByText(browser, tag, text):
-    elements = browser.find_elements_by_tag_name(tag)
-    for e in elements:
-        if e.get_attribute("innerText") == text:
-            return e
-
 def schedule_vaccine(browser):
     Select(browser.find_element_by_id("race-dropdown")).select_by_visible_text("White")
     Select(browser.find_element_by_id("ethnicity-dropdown")).select_by_visible_text("Decline to answer")
@@ -106,11 +85,7 @@ def schedule_vaccine(browser):
     getButtonByInnerText(browser, "Schedule Now").click()
 
 def find_p_with_text(browser, text):
-    paragraphs = browser.find_elements_by_tag_name('p')
-    for p in paragraphs:
-        if text in p.get_attribute("innerText"):
-            return True
-    return False
+    return getTagByText(browser, "p", text)
 
 def service_unavailable(browser):
     return appointments_unavailable(browser) or find_p_with_text(browser, "Service temporarily unavailable")
@@ -166,10 +141,10 @@ def login_and_check(argv, second_dose=False):
                 break
         except Exception as e:
             print(e)
-    message = "Found an appointment!"
+    message = "Found a Walgreens appointment!"
     print(message)
     try:
-        send_message(message, account_sid, auth_token)
+        send_message(message)
     except:
         pass
     get_appointment(chosen_date, argv, get_location(browser), chosen_time, second_dose=second_dose)
