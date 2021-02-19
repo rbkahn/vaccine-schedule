@@ -1,8 +1,9 @@
 from selenium import webdriver
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
-from utils import send_message, getButtonByInnerText, getTagByText
+from utils import send_message, clickButtonByInnerText, getTagByText
 import time, sys, winsound
 
 url = 'https://www.walgreens.com/login.jsp?ru=%2Ffindcare%2Fvaccination%2Fcovid-19%2Fappointment%2Fscreening%3Fflow%3Drx'
@@ -56,17 +57,19 @@ def get_appointment(date, argv, loc, time, second_dose=False):
     Select(browser.find_element_by_id("select-dropdown")).select_by_value(time)
 
 
-def fill_out_survey(browser, second_dose=False):
+def fill_out_survey(browser):
     browser.implicitly_wait(10)
     browser.find_element_by_id('sq_100i_1').click()
     browser.find_element_by_id('sq_102i_1').click()
     browser.find_element_by_id('sq_103i_1').click()
     browser.find_element_by_id('sq_104i_1').click()
     browser.find_elements_by_class_name("sv_complete_btn")[0].click()
-    
     browser.find_element_by_id("hn-startVisitBlock-gb-terms").click()
     time.sleep(2)
-    
+
+def schedule_vaccine(browser, second_dose=False):
+    Select(browser.find_element_by_id("race-dropdown")).select_by_visible_text("White")
+    Select(browser.find_element_by_id("ethnicity-dropdown")).select_by_visible_text("Decline to answer")
     if second_dose:
         browser.find_element_by_id("dose2").click()
         browser.find_element_by_id("datepicker0").click()
@@ -74,15 +77,7 @@ def fill_out_survey(browser, second_dose=False):
         Select(browser.find_element_by_id("vaccination-dropdown")).select_by_visible_text("Moderna")
     else:
         browser.find_element_by_id("dose1").click()
-    time.sleep(1)
-    # button isn't available
-    browser.find_element_by_id("continueBtn").click()
-
-def schedule_vaccine(browser):
-    Select(browser.find_element_by_id("race-dropdown")).select_by_visible_text("White")
-    Select(browser.find_element_by_id("ethnicity-dropdown")).select_by_visible_text("Decline to answer")
-    browser.find_element_by_id("dose1").click()
-    getButtonByInnerText(browser, "Schedule Now").click()
+    clickButtonByInnerText(browser, "Schedule Now")
 
 def find_p_with_text(browser, text):
     return getTagByText(browser, "p", text)
@@ -99,7 +94,7 @@ def check_availability(browser, home_zips):
             time.sleep(2)
             browser.find_element_by_id("inputLocation").clear()
             browser.find_element_by_id("inputLocation").send_keys(home_zip)
-            getButtonByInnerText(browser, "Search").click()
+            clickButtonByInnerText(browser, "Search")
             time.sleep(2)
             if not appointments_unavailable(browser):
                 if service_unavailable(browser):
@@ -110,7 +105,7 @@ def check_availability(browser, home_zips):
 
 
 def confirm_eligibility(browser):
-    getTagByText(browser, "a", "See if you're eligible").click()
+    ActionChains(browser).send_keys(Keys.TAB).send_keys(Keys.ENTER).perform()
     time.sleep(3)
     browser.find_element_by_id("sq_100i_1").click()
     browser.find_element_by_id("eligibility-check").click()
@@ -119,9 +114,13 @@ def confirm_eligibility(browser):
 def check_for_appointments(browser, argv, second_dose=False):
     if check_availability(browser, argv[4:]):
         confirm_eligibility(browser)
-        fill_out_survey(browser, second_dose=second_dose)
-        schedule_vaccine(browser)
-        return True
+        fill_out_survey(browser)
+        schedule_vaccine(browser, second_dose=second_dose)
+        if getTagByText(browser, "span", "Service unavailable"):
+            return False
+        else:
+            winsound.Beep(500, 1000)
+            return True
     else:
         return False
 
@@ -151,6 +150,4 @@ def login_and_check(argv, second_dose=False):
 
 if __name__ == "__main__":
     login_and_check(sys.argv, second_dose=False)
-            
-            
         

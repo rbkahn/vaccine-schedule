@@ -12,11 +12,14 @@ def send_message(message):
                      from_='+14159497162',
                      to='+18477103770')
 
-def getButtonByInnerText(browser, innerText):
-    return getTagByText(browser, "button", innerText)
+def clickButtonByInnerText(browser, innerText, i=1):
+    getTagByText(browser, "button", innerText, i).click()
 
-def getTagByText(browser, tag, text):
+def getTagByText(browser, tag, text, i=1):
     elements = browser.find_elements_by_tag_name(tag)
     for e in elements:
         if text in e.get_attribute("innerText"):
-            return e
+            if i == 1:
+                return e
+            else:
+                i -= 1
