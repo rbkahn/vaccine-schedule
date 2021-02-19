@@ -6,3 +6,4 @@ __pycache__/*
 /geckodriver.log
 /__pycache__/walgreens_bot.cpython-37.pyc
 patient_info.csv
+/patient_info.csv

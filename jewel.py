@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver import ActionChains
-import time, sys, winsound
+import time, winsound
 from utils import clickButtonByInnerText, send_message
 import csv
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     browser = webdriver.Firefox(executable_path=r'C:\usr\local\bin\geckodriver.exe')
     while True:
         try:
-            if check_for_appointments(browser, sys.argv[4]):
+            if check_for_appointments(browser, patients[0]['Zip Code']):
                 break
         except Exception as e:
             print(e)
