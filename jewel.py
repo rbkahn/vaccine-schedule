@@ -83,6 +83,8 @@ if __name__ == "__main__":
             print(e)
         time.sleep(30)
     winsound.Beep(500, 1000)
-    fill_form(browser)
-    send_message("Found a Jewel appointment")
+    try:
+        fill_form(browser)
+    finally:
+        send_message("Found a Jewel appointment")
     

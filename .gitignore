@@ -5,3 +5,4 @@ twilio-credentials.txt
 __pycache__/*
 /geckodriver.log
 /__pycache__/walgreens_bot.cpython-37.pyc
+patient_info.csv
