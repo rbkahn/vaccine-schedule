@@ -89,6 +89,8 @@ def appointments_unavailable(browser):
     return find_p_with_text(browser, "Appointments unavailable")
 
 def check_availability(browser, home_zips):
+    if "those eligible to receive a COVID-19" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
+        return True
     while True:
         for home_zip in home_zips:
             time.sleep(2)
@@ -105,6 +107,8 @@ def check_availability(browser, home_zips):
 
 
 def confirm_eligibility(browser):
+    if "those eligible to receive a COVID-19" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
+        return
     ActionChains(browser).send_keys(Keys.TAB).send_keys(Keys.ENTER).perform()
     time.sleep(3)
     browser.find_element_by_id("sq_100i_1").click()
@@ -116,7 +120,8 @@ def check_for_appointments(browser, argv, second_dose=False):
         confirm_eligibility(browser)
         fill_out_survey(browser)
         schedule_vaccine(browser, second_dose=second_dose)
-        if getTagByText(browser, "span", "Service unavailable"):
+        time.sleep(1)
+        if "Service unavailable" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
             return False
         else:
             winsound.Beep(500, 1000)
