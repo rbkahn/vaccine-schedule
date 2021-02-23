@@ -1,4 +1,11 @@
 from twilio.rest import Client
+import csv
+
+patients = []
+with open('patient_info.csv') as f:
+    for row in csv.DictReader(f, skipinitialspace=True):
+        patient = {k.strip(): v for k, v in row.items()}
+        patients.append(patient)
 
 with open("twilio-credentials.txt") as fp:
     lines = fp.readlines()
