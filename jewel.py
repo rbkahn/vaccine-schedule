@@ -34,34 +34,38 @@ def welcome_screen(browser):
 def check_for_appointments(browser, patient_zips):
     # wait for captcha
     while True:
-        Select(browser.find_element_by_id("appointmentType-type")).select_by_visible_text("COVID Vaccine Dose 1 Appt")
-        clickButtonByInnerText(browser, "Start Set up")
-        time.sleep(4)
-        browser.execute_script("window.scrollTo(0, 500)") 
-        browser.find_element_by_xpath("//div[@id='covid19-reg-v2']/div[1]/div[2]/div[1]/div[2]/div[1]/div[4]/div[2]/div[1]/div[1]/button[1]").click()
-        Select(browser.find_element_by_id('item-type'))
-        select = Select(browser.find_element_by_id("item-type"))
-        options = select.options
-        index = 0
-        while True:
-            select.select_by_index(index)
+        try:
+            Select(browser.find_element_by_id("appointmentType-type")).select_by_visible_text("COVID Vaccine Dose 1 Appt")
+            clickButtonByInnerText(browser, "Start Set up")
+            time.sleep(4)
+            browser.execute_script("window.scrollTo(0, 500)") 
             time.sleep(1)
-            html = browser.find_element_by_xpath("//div[@id='covid19-reg-v2']/div[1]/div[3]/div[1]/div[2]/div[1]/div[3]/div[1]").get_attribute("innerText")
-            while "Loading" in html:
+            browser.find_element_by_xpath("//div[@id='covid19-reg-v2']/div[1]/div[2]/div[1]/div[2]/div[1]/div[4]/div[2]/div[1]/div[1]/button[1]").click()
+            select = Select(browser.find_element_by_id("item-type"))
+            options = select.options
+            index = 0
+            while True:
+                select.select_by_index(index)
                 time.sleep(1)
                 html = browser.find_element_by_xpath("//div[@id='covid19-reg-v2']/div[1]/div[3]/div[1]/div[2]/div[1]/div[3]/div[1]").get_attribute("innerText")
-            if "Currently, all appointments are booked in your area" in html:
-                browser.execute_script("window.scrollTo(0, 0)") 
-                browser.find_elements_by_class_name("btn-danger")[0].click()
-                try:
-                    [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
-                except:
-                    [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
-                break
-            elif "There is no availability" not in html:
-                return True
-            else:
-                index = (index + 1) % len(options)
+                while "Loading" in html:
+                    time.sleep(1)
+                    html = browser.find_element_by_xpath("//div[@id='covid19-reg-v2']/div[1]/div[3]/div[1]/div[2]/div[1]/div[3]/div[1]").get_attribute("innerText")
+                if "Currently, all appointments are booked in your area" in html:
+                    browser.execute_script("window.scrollTo(0, 0)") 
+                    browser.find_elements_by_class_name("btn-danger")[0].click()
+                    try:
+                        [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
+                    except:
+                        time.sleep(3)
+                        [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
+                    break
+                elif "There is no availability" not in html:
+                    return True
+                else:
+                    index = (index + 1) % len(options)
+        except:
+            pass
 
 def pick_year(browser, our_year):
     lower_bound = 2020
