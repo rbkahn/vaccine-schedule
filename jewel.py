@@ -53,7 +53,10 @@ def check_for_appointments(browser, patient_zips):
             if "Currently, all appointments are booked in your area" in html:
                 browser.execute_script("window.scrollTo(0, 0)") 
                 browser.find_elements_by_class_name("btn-danger")[0].click()
-                [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
+                try:
+                    [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
+                except:
+                    [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
                 break
             elif "There is no availability" not in html:
                 return True
