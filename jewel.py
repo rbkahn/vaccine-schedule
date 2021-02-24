@@ -57,14 +57,15 @@ def check_for_appointments(browser, patient_zips):
                     try:
                         [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
                     except:
-                        time.sleep(3)
+                        time.sleep(8)
                         [element for element in browser.find_elements_by_class_name('btn-success') if element.get_attribute("innerText") == "Ok"][0].click()
                     break
                 elif "There is no availability" not in html:
                     return True
                 else:
                     index = (index + 1) % len(options)
-        except:
+        except Exception as e:
+            print(e)
             pass
 
 def pick_year(browser, our_year):
@@ -92,6 +93,7 @@ def pick_day(browser, our_day):
 
 def pick_date(browser, date_str):
     date = parser.parse(date_str)
+    browser.find_element_by_id("dob").click()
     pick_year(browser, date.year)
     pick_month(browser, date.strftime('%B'))
     pick_day(browser, date.day)
@@ -111,7 +113,7 @@ def fill_form(browser):
     ActionChains(browser).send_keys(patient['Zip Code']).send_keys(Keys.TAB).perform()
     #gender
     ActionChains(browser).send_keys(Keys.TAB).send_keys(Keys.SPACE).send_keys(Keys.TAB).perform()
-    pick_date(browser, patients['Birthdate'])
+    pick_date(browser, patient['Birthdate'])
     ActionChains(browser).send_keys(Keys.TAB).perform()
     #ethnicity
     ActionChains(browser).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.TAB).perform()
@@ -130,7 +132,7 @@ def select_appointment(browser):
     pass
 
 if __name__ == "__main__":
-    browser = webdriver.Firefox(executable_path=r'C:\usr\local\bin\geckodriver.exe')
+    browser = webdriver.Firefox(executable_path='geckodriver.exe')
     while True:
         try:
             welcome_screen(browser)

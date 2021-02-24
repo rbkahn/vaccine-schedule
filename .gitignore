@@ -7,3 +7,4 @@ __pycache__/*
 /__pycache__/walgreens_bot.cpython-37.pyc
 patient_info.csv
 /patient_info.csv
+/geckodriver.exe
