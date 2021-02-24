@@ -71,9 +71,9 @@ def check_for_appointments(browser, patient_zips):
 def pick_year(browser, our_year):
     lower_bound = 2020
     while (our_year < lower_bound):
+        browser.find_element_by_xpath("//table[@class='uib-yearpicker']/thead[1]/tr[1]/th[1]").click()
         bound_string = browser.find_element_by_xpath("//table[@class='uib-yearpicker']/thead[1]/tr[1]/th[2]").get_attribute("innerText")
         lower_bound = int(bound_string.split('-')[0].strip())
-        browser.find_element_by_xpath("//table[@class='uib-yearpicker']/thead[1]/tr[1]/th[1]").click()
     years = browser.find_elements_by_xpath("//table[@class='uib-yearpicker']/tbody[1]/tr/td")
     for year in years:
         if int(year.get_attribute("innerText")) == int(our_year):
