@@ -124,6 +124,7 @@ def find_availability(browser, home_zips):
         time.sleep(1)
         if not find_p_with_text(browser, "We don't have any"):
             return True
+        time.sleep(5)
         
 
 def check_for_appointments(browser, argv, second_dose=False):
