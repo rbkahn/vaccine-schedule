@@ -4,6 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
 from utils import send_message, clickButtonByInnerText, getTagByText
+from itertools import cycle
 import time, sys, winsound
 
 url = 'https://www.walgreens.com/login.jsp?ru=%2Ffindcare%2Fvaccination%2Fcovid-19%2Fappointment%2Fscreening%3Fflow%3Drx'
@@ -57,8 +58,9 @@ def get_appointment(date, argv, loc, time, second_dose=False):
     Select(browser.find_element_by_id("select-dropdown")).select_by_value(time)
 
 
-def fill_out_survey(browser):
-    browser.implicitly_wait(10)
+def fill_out_survey(browser, second_dose=False):
+    browser.implicitly_wait(20)
+    time.sleep(10)
     browser.find_element_by_id('sq_100i_1').click()
     browser.find_element_by_id('sq_102i_1').click()
     browser.find_element_by_id('sq_103i_1').click()
@@ -66,8 +68,6 @@ def fill_out_survey(browser):
     browser.find_elements_by_class_name("sv_complete_btn")[0].click()
     browser.find_element_by_id("hn-startVisitBlock-gb-terms").click()
     time.sleep(2)
-
-def schedule_vaccine(browser, second_dose=False):
     Select(browser.find_element_by_id("race-dropdown")).select_by_visible_text("White")
     Select(browser.find_element_by_id("ethnicity-dropdown")).select_by_visible_text("Decline to answer")
     if second_dose:
@@ -88,46 +88,68 @@ def service_unavailable(browser):
 def appointments_unavailable(browser):
     return find_p_with_text(browser, "Appointments unavailable")
 
-def check_availability(browser, home_zips):
+def check_state_availability(browser):
     if "those eligible to receive a COVID-19" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
         return True
     while True:
-        for home_zip in home_zips:
-            time.sleep(2)
-            browser.find_element_by_id("inputLocation").clear()
-            browser.find_element_by_id("inputLocation").send_keys(home_zip)
-            clickButtonByInnerText(browser, "Search")
-            time.sleep(2)
-            if not appointments_unavailable(browser):
-                if service_unavailable(browser):
-                    return False
-                else:
-                    return True
-            time.sleep(5)
+        time.sleep(2)
+        browser.find_element_by_id("inputLocation").clear()
+        browser.find_element_by_id("inputLocation").send_keys('Carbondale, IL')
+        clickButtonByInnerText(browser, "Search")
+        time.sleep(2)
+        if not appointments_unavailable(browser):
+            if service_unavailable(browser):
+                return False
+            else:
+                return True
+        time.sleep(5)
 
 
 def confirm_eligibility(browser):
     if "those eligible to receive a COVID-19" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
         return
     ActionChains(browser).send_keys(Keys.TAB).send_keys(Keys.ENTER).perform()
-    time.sleep(3)
-    browser.find_element_by_id("sq_100i_1").click()
+    time.sleep(5)
+    browser.find_element_by_id("sq_100i_3").click()
     browser.find_element_by_id("eligibility-check").click()
     browser.find_element_by_class_name("sv_complete_btn").click()
 
-def check_for_appointments(browser, argv, second_dose=False):
-    if check_availability(browser, argv[4:]):
-        confirm_eligibility(browser)
-        fill_out_survey(browser)
-        schedule_vaccine(browser, second_dose=second_dose)
+def find_availability(browser, home_zips):
+    for home_zip in cycle(home_zips):
+        browser.find_element_by_id("search-address").clear()
         time.sleep(1)
-        if "Service unavailable" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
-            return False
-        else:
+        browser.find_element_by_id("search-address").send_keys(home_zip)
+        time.sleep(1)
+        browser.find_element_by_id("icon__search").click()
+        time.sleep(1)
+        if not find_p_with_text(browser, "We don't have any"):
+            return True
+        
+
+def check_for_appointments(browser, argv, second_dose=False):
+    if check_state_availability(browser):
+        confirm_eligibility(browser)
+        fill_out_survey(browser, second_dose=second_dose)
+        if find_availability(browser, argv[4:]):
             winsound.Beep(500, 1000)
             return True
+        if "Service unavailable" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
+            return False
     else:
         return False
+
+def choose_appointment(browser, second_dose=False):
+    browser.find_elements_by_class_name('timeSlot')[0].click()
+    buttons = browser.find_elements_by_class_name("confirmDoseTimeslots")  
+    for button in buttons:
+        if not "btn__disabled" in button.get_attribute("className"):
+            button.click()
+    if not second_dose:
+        browser.find_elements_by_class_name('timeSlot')[0].click()
+    buttons = browser.find_elements_by_class_name("confirmDoseTimeslots")  
+    for button in buttons:
+        if not "btn__disabled" in button.get_attribute("className"):
+            button.click()    
 
 def login_and_check(argv, second_dose=False):
     username = argv[1]
@@ -142,6 +164,10 @@ def login_and_check(argv, second_dose=False):
             pass
         try:
             if check_for_appointments(browser, argv, second_dose=second_dose):
+                try:
+                    choose_appointment(browser)
+                except:
+                    pass
                 break
         except Exception as e:
             print(e)
@@ -151,7 +177,6 @@ def login_and_check(argv, second_dose=False):
         send_message(message)
     except:
         pass
-    get_appointment(chosen_date, argv, get_location(browser), chosen_time, second_dose=second_dose)
 
 if __name__ == "__main__":
     login_and_check(sys.argv, second_dose=False)

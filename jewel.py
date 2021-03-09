@@ -69,7 +69,7 @@ def check_for_appointments(browser, patient_zips):
             pass
 
 def pick_year(browser, our_year):
-    lower_bound = 2020
+    lower_bound = 2000
     while (our_year < lower_bound):
         browser.find_element_by_xpath("//table[@class='uib-yearpicker']/thead[1]/tr[1]/th[1]").click()
         bound_string = browser.find_element_by_xpath("//table[@class='uib-yearpicker']/thead[1]/tr[1]/th[2]").get_attribute("innerText")
@@ -78,18 +78,21 @@ def pick_year(browser, our_year):
     for year in years:
         if int(year.get_attribute("innerText")) == int(our_year):
             year.click()
+            break
 
 def pick_month(browser, our_month):
     months = browser.find_elements_by_xpath("//table[@class='uib-monthpicker']/tbody[1]/tr/td")
     for month in months:
         if month.get_attribute("innerText") == our_month:
             month.click()
+            break
 
 def pick_day(browser, our_day):
-    days = browser.find_elements_by_xpath("//table[@class='uib-datepicker']/tbody[1]/tr/td")
+    days = browser.find_elements_by_class_name("uib-day")[42:]
     for day in days:
         if int(day.get_attribute("innerText")) == int(our_day):
             day.click()
+            break
 
 def pick_date(browser, date_str):
     date = parser.parse(date_str)
@@ -109,27 +112,26 @@ def fill_form(browser):
     # Address 2
     ActionChains(browser).send_keys(Keys.TAB).perform()
     ActionChains(browser).send_keys(patient['City']).send_keys(Keys.TAB).perform()
-    ActionChains(browser).send_keys('IL').send_keys(Keys.TAB).perform()
+    #state (always IL)
+    ActionChains(browser).send_keys('I').send_keys(Keys.DOWN).send_keys(Keys.TAB).perform()
     ActionChains(browser).send_keys(patient['Zip Code']).send_keys(Keys.TAB).perform()
     #gender
     ActionChains(browser).send_keys(Keys.TAB).send_keys(Keys.SPACE).send_keys(Keys.TAB).perform()
     pick_date(browser, patient['Birthdate'])
-    ActionChains(browser).send_keys(Keys.TAB).perform()
+    ActionChains(browser).send_keys(Keys.TAB).send_keys(Keys.TAB).perform()
     #ethnicity
     ActionChains(browser).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.TAB).perform()
     #race
     ActionChains(browser).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.DOWN).send_keys(Keys.TAB).perform()
     ActionChains(browser).send_keys(patient['Phone']).send_keys(Keys.TAB).perform()
     ActionChains(browser).send_keys(Keys.SPACE).perform()
+    time.sleep(2)
     ActionChains(browser).send_keys(Keys.TAB).send_keys(patient['Email']).send_keys(Keys.TAB).perform()
     ActionChains(browser).send_keys(patient['Phone']).send_keys(Keys.TAB).perform()
     ActionChains(browser).send_keys(patient['Email']).send_keys(Keys.TAB).perform()
     ActionChains(browser).send_keys(Keys.SPACE).perform()
     ActionChains(browser).send_keys(Keys.SPACE).send_keys(Keys.TAB).send_keys(Keys.TAB).send_keys(patient['First Name'] + " " + patient['Last Name']).perform()
     ActionChains(browser).send_keys(Keys.TAB).send_keys(Keys.SPACE).perform()
-
-def select_appointment(browser):
-    pass
 
 if __name__ == "__main__":
     browser = webdriver.Firefox(executable_path='geckodriver.exe')
@@ -141,9 +143,8 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
         time.sleep(5)
-    winsound.Beep(800, 2000)
+    winsound.Beep(880, 2000)
     try:
-        select_appointment(browser)
         fill_form(browser)
     except Exception as e:
         print(e)

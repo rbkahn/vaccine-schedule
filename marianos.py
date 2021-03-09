@@ -16,7 +16,7 @@ def check_for_appointments(browser, zip):
             return True
     return False
 
-n = 2
+n = 3
 def fill_out_survey(browser):
     browser.get(url)
     browser.implicitly_wait(5)
