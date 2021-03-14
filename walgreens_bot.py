@@ -2,7 +2,6 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-from webdriver_manager.chrome import ChromeDriverManager
 from utils import send_message, clickButtonByInnerText, getTagByText
 from itertools import cycle
 import time, sys, winsound
@@ -13,9 +12,6 @@ url = 'https://www.walgreens.com/findcare/vaccination/covid-19/appointment/scree
 # global variables for success
 chosen_date = ""
 chosen_time = ""
-
-def get_location(browser):
-    return browser.find_element_by_xpath("//section[@class='locationLeft']/section[1]/p[3]").get_attribute("innerText")
 
 def login(browser, username, password, security_answer):
     browser.find_element_by_name("username").send_keys(username)
@@ -30,37 +26,9 @@ def login(browser, username, password, security_answer):
     except:
         pass
 
-def get_appointment(date, argv, loc, time, second_dose=False):
-    browser = webdriver.Chrome(ChromeDriverManager().install())
-    browser.get(url)
-    login(browser, argv[1], argv[2], argv[3])
-    fill_out_survey(browser, argv[4], second_dose=second_dose)
-    browser.find_element_by_class_name("continueBtn").click()
-    time.sleep(1)
-    browser.find_element_by_class_name("storeSearch").click()
-    time.sleep(1)
-    browser.find_elements_by_class_name("selectbtn")[0].click()
-    browser.find_element_by_id("continueBtn").click()
-    while get_location(browser)[-5:] != loc[-5:]:
-        try: 
-            browser.find_element_by_name("userStore").click()
-        except:
-            pass
-        time.sleep(1)
-        browser.find_element_by_id("search-address").clear()
-        time.sleep(1)
-        browser.find_element_by_id("search-address").send_keys(loc[-5:])
-        time.sleep(1)
-        browser.find_element_by_class_name("storeSearch").click()
-        store_button = browser.find_elements_by_xpath(f"//section[@id='wag-store-info-0']/div[1]/section[3]/a[1]")
-        store_button[0].click()
-        time.sleep(5)
-    Select(browser.find_element_by_id("select-dropdown")).select_by_value(time)
-
-
 def fill_out_survey(browser, second_dose=False):
     browser.implicitly_wait(20)
-    time.sleep(10)
+    time.sleep(5)
     browser.find_element_by_id('sq_100i_1').click()
     browser.find_element_by_id('sq_102i_1').click()
     browser.find_element_by_id('sq_103i_1').click()
@@ -88,21 +56,22 @@ def service_unavailable(browser):
 def appointments_unavailable(browser):
     return find_p_with_text(browser, "Appointments unavailable")
 
-def check_state_availability(browser):
+def check_state_availability(browser, locations):
     if "those eligible to receive a COVID-19" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
         return True
-    while True:
+    for location in cycle(locations):
         time.sleep(2)
         browser.find_element_by_id("inputLocation").clear()
-        browser.find_element_by_id("inputLocation").send_keys('Carbondale, IL')
+        browser.find_element_by_id("inputLocation").send_keys(location)
         clickButtonByInnerText(browser, "Search")
         time.sleep(2)
         if not appointments_unavailable(browser):
             if service_unavailable(browser):
                 return False
             else:
+                print(f"Found availability in {location}")
                 return True
-        time.sleep(5)
+        time.sleep(3)
 
 
 def confirm_eligibility(browser):
@@ -114,28 +83,33 @@ def confirm_eligibility(browser):
     browser.find_element_by_id("eligibility-check").click()
     browser.find_element_by_class_name("sv_complete_btn").click()
 
+def enter_zip(browser, zip):
+    browser.find_element_by_id("search-address").clear()
+    time.sleep(1)
+    browser.find_element_by_id("search-address").send_keys(zip)
+    time.sleep(1)
+    browser.find_element_by_id("icon__search").click()
+    time.sleep(1)
+
 def find_availability(browser, home_zips):
-    for home_zip in cycle(home_zips):
-        browser.find_element_by_id("search-address").clear()
-        time.sleep(1)
-        browser.find_element_by_id("search-address").send_keys(home_zip)
-        time.sleep(1)
-        browser.find_element_by_id("icon__search").click()
-        time.sleep(1)
+    for zip in cycle(home_zips):
+        enter_zip(browser, zip)
         if not find_p_with_text(browser, "We don't have any"):
-            return True
+            time.sleep(1)
+            if find_p_with_text(browser, "Service unavailable"):
+                return False
+            time.sleep(2)
+            enter_zip(browser, zip)
+            if not find_p_with_text(browser, "We don't have any"):
+                winsound.Beep(500, 1000)
+                return zip
         time.sleep(5)
-        
 
 def check_for_appointments(browser, argv, second_dose=False):
-    if check_state_availability(browser):
+    if check_state_availability(browser, ['Carbondale, IL', 'Springfield, IL'] + argv[4:]):
         confirm_eligibility(browser)
         fill_out_survey(browser, second_dose=second_dose)
-        if find_availability(browser, argv[4:]):
-            winsound.Beep(500, 1000)
-            return True
-        if "Service unavailable" in browser.find_element_by_id("wag-body-main-container").get_attribute("innerHTML"):
-            return False
+        return find_availability(browser, argv[4:])
     else:
         return False
 
@@ -164,7 +138,8 @@ def login_and_check(argv, second_dose=False):
         except:
             pass
         try:
-            if check_for_appointments(browser, argv, second_dose=second_dose):
+            zip = check_for_appointments(browser, argv, second_dose=second_dose)
+            if zip:
                 try:
                     choose_appointment(browser)
                 except:
@@ -172,7 +147,7 @@ def login_and_check(argv, second_dose=False):
                 break
         except Exception as e:
             print(e)
-    message = "Found a Walgreens appointment!"
+    message = f"Found a Walgreens appointment in {zip}!"
     print(message)
     try:
         send_message(message)
