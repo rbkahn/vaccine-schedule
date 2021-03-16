@@ -91,7 +91,7 @@ def enter_zip(browser, zip):
     browser.find_element_by_id("icon__search").click()
     time.sleep(1)
 
-def find_availability(browser, home_zips):
+def find_availability(browser, home_zips, second_dose=False):
     for zip in cycle(home_zips):
         enter_zip(browser, zip)
         if not find_p_with_text(browser, "We don't have any"):
@@ -100,31 +100,41 @@ def find_availability(browser, home_zips):
                 return False
             time.sleep(2)
             enter_zip(browser, zip)
-            if not find_p_with_text(browser, "We don't have any"):
-                winsound.Beep(500, 1000)
-                return zip
+            if find_p_with_text(browser, "with available appointments") and not find_p_with_text(browser, "We don't have any"):
+                if choose_appointment(browser, second_dose=second_dose):
+                    return zip
+                else:
+                    browser.find_element_by_xpath("//section[@id='wag-body-main-container']/section[1]/section[1]/button[1]").click()
+                    time.sleep(5)
+                    clickButtonByInnerText(browser, "Schedule Now")
         time.sleep(5)
 
 def check_for_appointments(browser, argv, second_dose=False):
     if check_state_availability(browser, ['Carbondale, IL', 'Springfield, IL'] + argv[4:]):
         confirm_eligibility(browser)
         fill_out_survey(browser, second_dose=second_dose)
-        return find_availability(browser, argv[4:])
+        return find_availability(browser, argv[4:], second_dose=second_dose)
     else:
         return False
+
+def click_first_button(buttons):
+    for button in buttons:
+        if not "btn__disabled" in button.get_attribute("className"):
+            button.click()
+            break
 
 def choose_appointment(browser, second_dose=False):
     browser.find_elements_by_class_name('timeSlot')[0].click()
     buttons = browser.find_elements_by_class_name("confirmDoseTimeslots")  
-    for button in buttons:
-        if not "btn__disabled" in button.get_attribute("className"):
-            button.click()
+    click_first_button(buttons)
     if not second_dose:
+        time.sleep(1)
+        if find_p_with_text(browser, "We don't have any"):
+            return False
         browser.find_elements_by_class_name('timeSlot')[0].click()
     buttons = browser.find_elements_by_class_name("confirmDoseTimeslots")  
-    for button in buttons:
-        if not "btn__disabled" in button.get_attribute("className"):
-            button.click()    
+    click_first_button(buttons)
+    return True  
 
 def login_and_check(argv, second_dose=False):
     username = argv[1]
@@ -139,12 +149,7 @@ def login_and_check(argv, second_dose=False):
             pass
         try:
             zip = check_for_appointments(browser, argv, second_dose=second_dose)
-            if zip:
-                try:
-                    choose_appointment(browser)
-                except:
-                    pass
-                break
+            print(f"Found appointments in {zip} but no second appointment")
         except Exception as e:
             print(e)
     message = f"Found a Walgreens appointment in {zip}!"
